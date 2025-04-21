@@ -1,5 +1,5 @@
 import React from 'react';
-import { SocialMediaPost } from '@/lib/apify';
+import { SocialMediaPost } from '@/lib/types';
 
 interface ResultCardProps {
   hashtag: string;
@@ -14,6 +14,10 @@ interface ResultCardProps {
 }
 
 export default function ResultCard({ hashtag, platform, stats, posts }: ResultCardProps) {
+  // Check if we have metadata information from the API
+  const hasMetadata = posts.length > 0 && posts[0]?.metadata;
+  const metadata = hasMetadata ? posts[0].metadata : null;
+
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
       <div className="bg-primary p-6 text-white">
@@ -22,6 +26,55 @@ export default function ResultCard({ hashtag, platform, stats, posts }: ResultCa
       </div>
 
       <div className="p-6">
+        {/* Metadata section if available */}
+        {hasMetadata && metadata && (
+          <div className="mb-8 bg-blue-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-blue-900 mb-3">Hashtag Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {metadata.postCount !== undefined && (
+                <div className="bg-white p-3 rounded-md shadow-sm">
+                  <span className="block text-2xl font-bold text-primary">{metadata.postCount.toLocaleString()}</span>
+                  <span className="text-sm text-gray-600">Total Posts on Platform</span>
+                </div>
+              )}
+              {metadata.postsPerDay !== undefined && (
+                <div className="bg-white p-3 rounded-md shadow-sm">
+                  <span className="block text-2xl font-bold text-primary">{metadata.postsPerDay}</span>
+                  <span className="text-sm text-gray-600">Posts Per Day</span>
+                </div>
+              )}
+              {metadata.difficulty && (
+                <div className="bg-white p-3 rounded-md shadow-sm">
+                  <span className="block text-2xl font-bold text-primary">{metadata.difficulty}</span>
+                  <span className="text-sm text-gray-600">Competition Level</span>
+                </div>
+              )}
+            </div>
+            
+            {metadata.related && metadata.related.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-md font-medium text-blue-800 mb-2">Related Hashtags</h4>
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-blue-50/50 rounded">
+                  {metadata.related.map((tag, index) => {
+                    // Handle both string tags and object tags with hash property
+                    const hashtagText = typeof tag === 'string' 
+                      ? tag.replace('#', '') 
+                      : tag.hash ? tag.hash.replace('#', '') : '';
+                    
+                    // Only render if we have a valid hashtag
+                    return hashtagText ? (
+                      <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm whitespace-nowrap">
+                        #{hashtagText}
+                        {typeof tag === 'object' && tag.info && <small className="ml-1 opacity-70">({tag.info})</small>}
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-gray-50 p-4 rounded-lg text-center">
             <span className="block text-3xl font-bold text-primary">{stats.totalPosts}</span>
@@ -76,3 +129,4 @@ export default function ResultCard({ hashtag, platform, stats, posts }: ResultCa
     </div>
   );
 }
+ 

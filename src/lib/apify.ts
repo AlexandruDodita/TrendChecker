@@ -12,18 +12,12 @@ interface ApifyDatasetItemResponse {
   data: any[];
 }
 
-export interface SocialMediaPost {
-  caption?: string;
-  likes?: number;
-  comments?: number;
-  url?: string;
-  imageUrl?: string;
-  username?: string;
-  timestamp?: string;
-  // Error fields that might be returned by Apify
+import { SocialMediaPost } from './types';
+
+// Error fields that might be returned by Apify
+export interface ApifyErrorResponse {
   error?: string;
   errorDescription?: string;
-  // Add other properties based on the actual response
 }
 
 export type Platform = 'instagram' | 'tiktok';
@@ -63,14 +57,17 @@ export async function runSocialMediaScraper(hashtag: string, platform: Platform)
         // Original Instagram input format (for shu8hvrXbJbY3Eb9W)
         searchType: "hashtag",
         resultsType: "posts",
-        resultsLimit: 20,
+        resultsLimit: 3, // Reduced from 10 to 3 to save costs
+        maxRequestsPerCrawl: 5, // Limit the total number of API requests
+        maxConcurrency: 1, // Reduce concurrency to prevent excessive requests
         hashtags: [cleanHashtag],
         search: cleanHashtag
       }
     : {
         // TikTok specific format
         hashtags: [cleanHashtag],
-        resultsPerPage: 20,
+        resultsPerPage: 3, // Reduced from 10 to 3
+        maxRequestsPerCrawl: 5, // Limit the total number of API requests
         shouldDownloadVideos: false,
         shouldDownloadCovers: false,
         proxyCountryCode: "None"
@@ -112,7 +109,7 @@ export async function runSocialMediaScraper(hashtag: string, platform: Platform)
   
   // Step 2: Poll for completion
   console.log('Waiting for actor run to complete...');
-  const maxAttempts = 30; // Maximum number of attempts (30 * 2 seconds = 60 seconds)
+  const maxAttempts = 60; // Reduced from 60 to 30 (30 * 2 seconds = 60 seconds max wait)
   let attempts = 0;
   let runFinished = false;
   let runInfo;
@@ -244,6 +241,56 @@ export function normalizeData(data: any[], platform: Platform): SocialMediaPost[
   }
   
   if (platform === 'instagram') {
+    // Handle Instagram data
+    console.log('Instagram data sample:', JSON.stringify(data.slice(0, 1)));
+    
+    // Check if the response is a hashtag metadata response
+    if (data.length > 0 && data[0].hasOwnProperty('name') && data[0].hasOwnProperty('postsCount')) {
+      // This is metadata about hashtags, not posts
+      console.log('Received hashtag metadata instead of posts');
+      
+      // See if there's a 'posts' array inside the hashtag object
+      const firstItem = data[0];
+      if (firstItem.posts && Array.isArray(firstItem.posts)) {
+        console.log(`Found ${firstItem.posts.length} posts in the hashtag metadata`);
+        return firstItem.posts.map((post: any) => ({
+          caption: post.caption || post.text,
+          likes: post.likesCount || post.likes || 0,
+          comments: post.commentsCount || post.comments || 0,
+          url: post.url || post.postUrl,
+          imageUrl: post.imageUrl || post.thumbnailUrl || post.displayUrl,
+          username: post.ownerUsername || post.username || post.author || 'Unknown',
+          timestamp: post.timestamp || post.created || new Date().toISOString(),
+        }));
+      }
+      
+      // If we don't have posts, return the hashtag as a single post-like object
+      // Collect all related hashtags from different categories
+      const allRelatedTags = [
+        ...(firstItem.related || []),
+        ...(firstItem.average || []),
+        ...(firstItem.rare || []),
+        ...(firstItem.relatedFrequent || [])
+      ];
+
+      return [{
+        caption: `#${firstItem.name} - ${firstItem.postsCount} posts`,
+        likes: firstItem.averageLikes || 0,
+        comments: firstItem.averageComments || 0,
+        url: firstItem.url,
+        imageUrl: '',
+        username: firstItem.name,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          postCount: firstItem.postsCount,
+          postsPerDay: firstItem.postsPerDay,
+          difficulty: firstItem.difficulty,
+          related: allRelatedTags.slice(0, 30) // Limit to 30 related tags to prevent UI overload
+        }
+      }];
+    }
+    
+    // Standard post format
     return data.map(item => ({
       caption: item.caption,
       likes: item.likesCount,
