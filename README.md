@@ -1,20 +1,22 @@
 # TrendCheck - Social Media Trend Analyzer
 
-A micro SaaS app that analyzes Instagram and TikTok trends using Apify scrapers.
+A micro SaaS app that analyzes Instagram hashtag trends using Apify scrapers.
 
 ## Features
 
-- Analyze hashtags on Instagram and TikTok
+- Analyze hashtags on Instagram
 - View engagement metrics (likes, comments)
 - See related trending hashtags
 - Browse recent posts for a hashtag
+- Rate limiting for API requests
 
 ## Tech Stack
 
-- Next.js with TypeScript 
+- Next.js with TypeScript and static export
 - TailwindCSS for styling
-- Firebase (Firestore + Auth) for user data
+- Firebase for user data
 - Apify API for social media data scraping
+- Upstash Redis for rate limiting
 
 ## Setup
 
@@ -30,9 +32,9 @@ npm install
 ```
 
 3. Set up environment variables:
-   - Rename `.env.example` to `.env` (if not already done)
-   - Fill in your Firebase credentials in the `.env` file
-   - Add your Apify key and actor IDs (already included for demo purposes)
+   - Copy the `.env.example` file to `.env` (see example below)
+   - Fill in your Firebase credentials
+   - Add your Apify key and actor IDs
 
 4. Run the development server:
 ```bash
@@ -41,25 +43,78 @@ npm run dev
 
 5. Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
-## Firebase Setup
+6. To build the application:
+```bash
+npm run build
+```
 
-1. Create a Firebase project at [https://console.firebase.google.com/](https://console.firebase.google.com/)
-2. Set up Authentication with Google provider and Anonymous login
-3. Create a Firestore database
-4. Add your Firebase config to the `.env` file
+## Environment Variables
 
-## Apify Setup
+The application requires the following environment variables:
 
-1. Create an account on [Apify](https://apify.com)
-2. Get your API key from the Apify console
-3. Find the actor IDs for Instagram and TikTok scrapers
-4. Add these details to your `.env` file
+```
+# Apify configuration
+APIFY_KEY=your_apify_key
+APIFY_API_BASE_URL=https://api.apify.com
+APIFY_ACTOR_ID_TIKTOK=actor_id_for_tiktok
+APIFY_ACTOR_ID_INSTAGRAM=actor_id_for_instagram
 
-### Apify Input Requirements
+# Client-side access to Apify
+NEXT_PUBLIC_APIFY_KEY=${APIFY_KEY}
+NEXT_PUBLIC_APIFY_API_BASE_URL=${APIFY_API_BASE_URL}
+NEXT_PUBLIC_APIFY_ACTOR_ID_TIKTOK=${APIFY_ACTOR_ID_TIKTOK}
+NEXT_PUBLIC_APIFY_ACTOR_ID_INSTAGRAM=${APIFY_ACTOR_ID_INSTAGRAM}
+
+# Upstash Redis for rate limiting
+NEXT_PUBLIC_UPSTASH_REDIS_REST_URL=your_upstash_url
+NEXT_PUBLIC_UPSTASH_REDIS_REST_TOKEN=your_upstash_token
+
+# Firebase config
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_firebase_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_firebase_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_firebase_measurement_id
+```
+
+### .env.example
+
+Here's a sample `.env.example` file that you can copy and fill in with your own values:
+
+```
+# Apify configuration
+APIFY_KEY=apify_api_XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+APIFY_API_BASE_URL=https://api.apify.com
+APIFY_ACTOR_ID_TIKTOK=GdWCkxBtKWOsKjdch
+APIFY_ACTOR_ID_INSTAGRAM=shu8hvrXbJbY3Eb9W
+
+# Make these accessible to the client-side
+NEXT_PUBLIC_APIFY_KEY=${APIFY_KEY}
+NEXT_PUBLIC_APIFY_API_BASE_URL=${APIFY_API_BASE_URL}
+NEXT_PUBLIC_APIFY_ACTOR_ID_TIKTOK=${APIFY_ACTOR_ID_TIKTOK}
+NEXT_PUBLIC_APIFY_ACTOR_ID_INSTAGRAM=${APIFY_ACTOR_ID_INSTAGRAM}
+
+# Upstash Redis for rate limiting
+NEXT_PUBLIC_UPSTASH_REDIS_REST_URL=https://your-instance.upstash.io
+NEXT_PUBLIC_UPSTASH_REDIS_REST_TOKEN=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# Firebase config
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXX
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789012
+NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789012:web:abcdefghijklmnopqrstuv
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+```
+
+## Apify Input Requirements
 
 The app uses specific input formats for each Apify actor:
 
-#### Instagram Actor Input (shu8hvrXbJbY3Eb9W - Default)
+#### Instagram Actor Input
 ```json
 {
   "searchType": "hashtag",
@@ -70,56 +125,11 @@ The app uses specific input formats for each Apify actor:
 }
 ```
 
-#### TikTok Actor Input
-```json
-{
-  "hashtags": ["fitness"],
-  "resultsPerPage": 20,
-  "shouldDownloadVideos": false,
-  "shouldDownloadCovers": false,
-  "proxyCountryCode": "None"
-}
-```
-
-If you're using different Apify actors, you may need to modify these input formats in `src/lib/apify.ts`.
-
-## Using the Apify API Tester
-
-The application includes a built-in API tester to help troubleshoot Apify integration. Access it at [http://localhost:3000/test](http://localhost:3000/test).
-
-The tester provides four modes:
-
-1. **Start Run** - Starts a new Apify actor run and returns the run ID
-2. **Check Run Status** - Checks if a run has completed and if data is available
-3. **Fetch Dataset** - Retrieves data from a dataset once a run is complete
-4. **Full Integration** - Performs all steps automatically (may take longer)
-
-### How to Use the Tester
-
-1. Start a new run:
-   - Select "Start Run" mode
-   - Enter a hashtag and select platform
-   - Click "Run Test"
-   - Note the run ID in the response
-
-2. Check run status:
-   - Select "Check Run Status" mode
-   - Input the run ID from the previous step
-   - Click "Run Test"
-   - Repeat until status shows "SUCCEEDED" or "FINISHED"
-
-3. Fetch dataset:
-   - Select "Fetch Dataset" mode
-   - Input the dataset ID from the status response
-   - Click "Run Test" to view the scraped data
-
-This workflow helps isolate issues with the Apify API integration.
-
 ## Known Limitations
 
-### Instagram & TikTok Scraping Restrictions
+### Instagram Scraping Restrictions
 
-Both Instagram and TikTok actively work to prevent scraping of their platforms. You may encounter the following error message when using the application:
+Instagram actively works to prevent scraping of their platform. You may encounter the following error message when using the application:
 
 ```
 Apify error: Empty or private data for provided input
@@ -140,14 +150,6 @@ For testing and demos, try using very popular hashtags which are more likely to 
 - #fitness
 - #photography
 - #fashion
-
-### Alternative Approaches
-
-If you continue to face issues with the Apify scraping actors, consider these alternatives:
-
-1. Use Instagram's official Graph API (requires business/creator account and app approval)
-2. Try different scraping services that may have better access
-3. Consider using a cache or database of previously scraped data as a fallback
 
 ## License
 

@@ -108,8 +108,8 @@ export async function runSocialMediaScraper(hashtag: string, platform: Platform)
   
   // Step 2: Poll for completion
   console.log('Waiting for actor run to complete...');
-  const maxAttempts = 60; // Reduced from 60 to 30 (30 * 2 seconds = 60 seconds max wait)
-  let attempts = 0;
+  const maxAttempts = 120; 
+    let attempts = 0;
   let runFinished = false;
   let runInfo;
   

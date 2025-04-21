@@ -45,6 +45,8 @@ yarn-error.log*
 # Your existing entry for /.env.* is good for files like .env.local etc.
 /.env.*
 .env
+# Ensure .env is ignored at the project root
+/.env
 
 # Next.js build output
 out/
