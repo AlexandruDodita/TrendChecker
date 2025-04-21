@@ -54,14 +54,13 @@ export async function runSocialMediaScraper(hashtag: string, platform: Platform)
   // Specific input format for each platform
   const input = platform === 'instagram' 
     ? {
-        // Original Instagram input format (for shu8hvrXbJbY3Eb9W)
-        searchType: "hashtag",
-        resultsType: "posts",
-        resultsLimit: 3, // Reduced from 10 to 3 to save costs
-        maxRequestsPerCrawl: 5, // Limit the total number of API requests
-        maxConcurrency: 1, // Reduce concurrency to prevent excessive requests
-        hashtags: [cleanHashtag],
-        search: cleanHashtag
+        "searchType": "hashtag",
+        "resultsType": "details",
+        "resultsLimit": 5,
+        "maxRequestsPerCrawl": 5,
+        "maxConcurrency": 2,
+        "hashtags": [cleanHashtag],
+        "search": cleanHashtag
       }
     : {
         // TikTok specific format
@@ -272,22 +271,57 @@ export function normalizeData(data: any[], platform: Platform): SocialMediaPost[
         ...(firstItem.rare || []),
         ...(firstItem.relatedFrequent || [])
       ];
-
-      return [{
+      
+      // Create an array to collect sample posts
+      let samplePosts = [];
+      
+      // Check for topPosts or recentPosts arrays
+      if (firstItem.topPosts && Array.isArray(firstItem.topPosts) && firstItem.topPosts.length > 0) {
+        console.log(`Found ${firstItem.topPosts.length} top posts for hashtag`);
+        samplePosts = firstItem.topPosts.slice(0, 6).map((post: any) => ({
+          caption: post.caption || post.text || `Post by ${post.ownerUsername || 'user'}`,
+          likes: post.likesCount || post.likes || 0,
+          comments: post.commentsCount || post.comments || 0,
+          url: post.url || post.postUrl,
+          imageUrl: post.imageUrl || post.thumbnailUrl || post.displayUrl || 'https://via.placeholder.com/300?text=No+Image',
+          username: post.ownerUsername || post.username || post.author || 'Unknown',
+          timestamp: post.timestamp || post.created || new Date().toISOString(),
+        }));
+      } else if (firstItem.recentPosts && Array.isArray(firstItem.recentPosts) && firstItem.recentPosts.length > 0) {
+        console.log(`Found ${firstItem.recentPosts.length} recent posts for hashtag`);
+        samplePosts = firstItem.recentPosts.slice(0, 6).map((post: any) => ({
+          caption: post.caption || post.text || `Post by ${post.ownerUsername || 'user'}`,
+          likes: post.likesCount || post.likes || 0,
+          comments: post.commentsCount || post.comments || 0,
+          url: post.url || post.postUrl,
+          imageUrl: post.imageUrl || post.thumbnailUrl || post.displayUrl || 'https://via.placeholder.com/300?text=No+Image',
+          username: post.ownerUsername || post.username || post.author || 'Unknown',
+          timestamp: post.timestamp || post.created || new Date().toISOString(),
+        }));
+      }
+      
+      // Create a special "info post" for the hashtag with enhanced metadata
+      const infoPost = {
         caption: `#${firstItem.name} - ${firstItem.postsCount} posts`,
         likes: firstItem.averageLikes || 0,
         comments: firstItem.averageComments || 0,
         url: firstItem.url,
-        imageUrl: '',
+        imageUrl: 'https://via.placeholder.com/300?text=Hashtag+Info',
         username: firstItem.name,
         timestamp: new Date().toISOString(),
         metadata: {
           postCount: firstItem.postsCount,
           postsPerDay: firstItem.postsPerDay,
           difficulty: firstItem.difficulty,
+          engagement: firstItem.engagement || 'Unknown',
+          averageLikes: firstItem.averageLikes || 0,
+          averageComments: firstItem.averageComments || 0,
           related: allRelatedTags.slice(0, 30) // Limit to 30 related tags to prevent UI overload
         }
-      }];
+      };
+      
+      // Return the info post and any sample posts
+      return [infoPost, ...samplePosts];
     }
     
     // Standard post format

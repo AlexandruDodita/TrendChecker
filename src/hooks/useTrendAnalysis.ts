@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { runSocialMediaScraper, getDatasetResults, normalizeData, Platform, SocialMediaPost } from '@/lib/apify';
+import { runSocialMediaScraper, getDatasetResults, normalizeData, Platform } from '@/lib/apify';
+import { SocialMediaPost } from '@/lib/types';
 
 export interface TrendAnalysisResult {
   posts: SocialMediaPost[];
@@ -39,10 +40,13 @@ export default function useTrendAnalysis() {
       const rawData = await getDatasetResults(datasetId);
       console.log(`Retrieved ${rawData.length} items from dataset`);
       
-      // Check if the data contains an error message
-      if (rawData.length === 1 && rawData[0].error) {
-        const errorMessage = rawData[0].errorDescription || rawData[0].error || "No data available";
-        throw new Error(`Apify error: ${errorMessage}`);
+      // Check if the data contains an error message - check the first item for error properties
+      if (rawData.length > 0 && rawData[0] && typeof rawData[0] === 'object') {
+        const firstItem = rawData[0] as any; // Cast to any to check potential error fields
+        if (firstItem.error) {
+          const errorMessage = firstItem.errorDescription || firstItem.error || "No data available";
+          throw new Error(`Apify error: ${errorMessage}`);
+        }
       }
       
       if (rawData.length === 0) {

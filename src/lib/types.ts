@@ -11,6 +11,9 @@ export type SocialMediaPost = {
     postsPerDay?: number;
     difficulty?: string;
     related?: Array<string | { hash: string; info: string }>;
+    engagement?: string;
+    averageLikes?: number;
+    averageComments?: number;
     [key: string]: any;
   };
 }; 

@@ -1,0 +1,9 @@
+# Allow all user agents to crawl the site
+User-agent: *
+Allow: /
+
+# Disallow crawling of specific paths if needed (e.g., API routes)
+# Disallow: /api/
+
+# Specify the location of the sitemap (optional)
+# Sitemap: YOUR_DEPLOYED_URL/sitemap.xml 
